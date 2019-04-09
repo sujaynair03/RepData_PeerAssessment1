@@ -1,0 +1,95 @@
+---
+title: "Reproducible Research Project 1"
+author: "Sujay Nair"
+date: "3/27/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##1.
+Reading in the data/getting a feel for the data
+
+```{r}
+activitydata <- read.csv("activity.csv")
+print(summary(activitydata))
+print(head(activitydata))
+```
+
+##2.
+Creating a histogram for the total number of steps taken each day and finding the mean and median of the total number of steps
+
+```{r}
+totalsteps <- aggregate(activitydata$steps, list(activitydata$date), sum)
+print(head(totalsteps))
+hist(totalsteps$x, xlab = "Number of Steps", main = "Steps per Day")
+print(mean(totalsteps$x, na.rm = TRUE))
+print(median(totalsteps$x, na.rm = TRUE))
+```
+
+##3.
+Finding the average daily activity pattern using a time series plot
+
+```{r}
+averagesteps <- aggregate(activitydata$steps, list(factor(activitydata$interval))
+                          , mean, na.rm = TRUE)
+print(head(averagesteps))
+plot(averagesteps$Group.1, averagesteps$x, type = "l")
+#Here we print the row with the maximum average value to see the interval with the max number of steps
+print(averagesteps[which.max(averagesteps$x),])
+```
+
+##4.
+Working with missing values
+
+```{r}
+#Total number of missing values
+NAs <- (is.na(activitydata))
+NAdataset <- activitydata[NAs,]
+#I filled in the NAs with the mean at each interval
+avgsteps_perint <- aggregate(activitydata$steps, list(activitydata$interval), mean, na.rm = TRUE)
+print(head(avgsteps_perint))
+colnames(avgsteps_perint)[colnames(avgsteps_perint)=="Group.1"] <- "interval"
+colnames(avgsteps_perint)[colnames(avgsteps_perint)=="x"] <- "average_value"
+mergeddataset <- merge(activitydata, avgsteps_perint, by = "interval")
+moreNAs <- is.na(mergeddataset$steps)
+mergeddataset[moreNAs,] = avgsteps_perint[moreNAs,]
+print(head(mergeddataset))
+newtotalsteps <- aggregate(mergeddataset$steps, list(mergeddataset$date), sum)
+print(head(newtotalsteps))
+hist(newtotalsteps$x, col = "purple")
+```
+
+
+
+##5
+Checking for differences in activity patterns in weekdays verse weekends
+
+```{r}
+activitydata$date <- as.POSIXct(strptime(activitydata$date, "%Y-%m-%d"))
+activitydata$day <- 0
+print(length(activitydata$date))
+for(i in 1:length(activitydata$date)){
+    if(weekdays(activitydata$date[i]) %in% c("Sunday", "Saturday")){
+      activitydata$day[i] = "weekend"
+    } else{
+      activitydata$day[i] = "weekday"
+    }
+  }
+print(unique(activitydata$day))
+
+weekendDAYS <- subset(activitydata, activitydata$day == "weekend")
+weekdayDAYS <- subset(activitydata, activitydata$day == "weekday")
+WKNDaveragesteps <- aggregate(weekendDAYS$steps, list((weekendDAYS$interval))
+                          , mean, na.rm = TRUE)
+WKDYaveragesteps <- aggregate(weekdayDAYS$steps, list((weekdayDAYS$interval))
+                          , mean, na.rm = TRUE)
+par(mfrow=c(2,1))
+plot(WKDYaveragesteps$Group.1, WKDYaveragesteps$x, type = "l", col = "blue", xlab = "Interval"
+     ,ylab = "Steps", main = "AVG Steps(Weekdays)", ylim = c(0,250))
+plot(WKNDaveragesteps$Group.1, WKNDaveragesteps$x, type = "l", col = "red", xlab = "Interval"
+     ,ylab = "Steps", main = "AVG Steps(Weekends)", ylim = c(0,250))
+
+
